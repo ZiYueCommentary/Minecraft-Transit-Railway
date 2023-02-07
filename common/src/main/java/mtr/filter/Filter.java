@@ -8,7 +8,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.math.Matrix4f;
 import mtr.Blocks;
-import mtr.ItemGroups;
+import mtr.CreativeModeTabs;
 import mtr.Items;
 import mtr.mappings.Text;
 import net.minecraft.client.Minecraft;
@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import org.apache.logging.log4j.message.ExitMessage;
 
 import java.util.*;
 
@@ -27,7 +28,8 @@ public class Filter extends Button
             Arrays.asList(
                     Items.RAILWAY_DASHBOARD.get().asItem().getDefaultInstance(),
                     Items.CABLE_CAR_DASHBOARD.get().asItem().getDefaultInstance(),
-                    Items.BOAT_DASHBOARD.get().asItem().getDefaultInstance()
+                    Items.BOAT_DASHBOARD.get().asItem().getDefaultInstance(),
+                    Items.RAILWAY_DASHBOARD.get().getDefaultInstance()
             ));
     public static final Filter CORE_RAILS = new Filter(Text.translatable("filter.mtr.core_rails"), Items.RAIL_CONNECTOR_PLATFORM.get().getDefaultInstance(),
             Arrays.asList(
@@ -51,6 +53,7 @@ public class Filter extends Button
                     Items.RAIL_CONNECTOR_SIDING.get().getDefaultInstance(),
                     Items.RAIL_CONNECTOR_TURN_BACK.get().getDefaultInstance(),
                     Items.RAIL_CONNECTOR_CABLE_CAR.get().getDefaultInstance(),
+                    Items.RAIL_CONNECTOR_RUNWAY.get().getDefaultInstance(),
                     Items.RAIL_REMOVER.get().getDefaultInstance()
             ));
     public static final Filter CORE_SIGNALS = new Filter(Text.translatable("filter.mtr.core_signals"), Items.SIGNAL_CONNECTOR_WHITE.get().getDefaultInstance(),
@@ -61,6 +64,7 @@ public class Filter extends Button
                     Items.SIGNAL_CONNECTOR_LIGHT_BLUE.get().getDefaultInstance(),
                     Items.SIGNAL_CONNECTOR_YELLOW.get().getDefaultInstance(),
                     Items.SIGNAL_CONNECTOR_GREEN.get().getDefaultInstance(),
+                    Items.SIGNAL_CONNECTOR_LIME.get().getDefaultInstance(),
                     Items.SIGNAL_CONNECTOR_PINK.get().getDefaultInstance(),
                     Items.SIGNAL_CONNECTOR_GRAY.get().getDefaultInstance(),
                     Items.SIGNAL_CONNECTOR_LIGHT_GRAY.get().getDefaultInstance(),
@@ -77,6 +81,7 @@ public class Filter extends Button
                     Items.SIGNAL_REMOVER_LIGHT_BLUE.get().getDefaultInstance(),
                     Items.SIGNAL_REMOVER_YELLOW.get().getDefaultInstance(),
                     Items.SIGNAL_REMOVER_GREEN.get().getDefaultInstance(),
+                    Items.SIGNAL_REMOVER_LIME.get().getDefaultInstance(),
                     Items.SIGNAL_REMOVER_PINK.get().getDefaultInstance(),
                     Items.SIGNAL_REMOVER_GRAY.get().getDefaultInstance(),
                     Items.SIGNAL_REMOVER_LIGHT_GRAY.get().getDefaultInstance(),
@@ -125,7 +130,8 @@ public class Filter extends Button
                     Blocks.BOAT_NODE.get().asItem().getDefaultInstance(),
                     Blocks.CABLE_CAR_NODE_LOWER.get().asItem().getDefaultInstance(),
                     Blocks.CABLE_CAR_NODE_STATION.get().asItem().getDefaultInstance(),
-                    Blocks.CABLE_CAR_NODE_UPPER.get().asItem().getDefaultInstance()
+                    Blocks.CABLE_CAR_NODE_UPPER.get().asItem().getDefaultInstance(),
+                    Blocks.AIRPLANE_NODE.get().asItem().getDefaultInstance()
             ));
     public static final Filter CORE_MISC = new Filter(Text.translatable("filter.mtr.core_misc"), Items.BRUSH.get().getDefaultInstance(),
             Arrays.asList(
@@ -212,12 +218,16 @@ public class Filter extends Button
                     Blocks.ROUTE_SIGN_WALL_LIGHT.get().asItem().getDefaultInstance(),
                     Blocks.ROUTE_SIGN_WALL_METAL.get().asItem().getDefaultInstance()
             ));
-    public static final Filter FACILITIES_SIGNAL_LIGHTS = new Filter(Text.translatable("filter.mtr.facilities_signal_lights"), Blocks.SIGNAL_LIGHT_1.get().asItem().getDefaultInstance(),
+    public static final Filter FACILITIES_SIGNAL_LIGHTS = new Filter(Text.translatable("filter.mtr.facilities_signal_lights"), Blocks.SIGNAL_LIGHT_2_ASPECT_1.get().asItem().getDefaultInstance(),
             Arrays.asList(
-                    Blocks.SIGNAL_LIGHT_1.get().asItem().getDefaultInstance(),
-                    Blocks.SIGNAL_LIGHT_2.get().asItem().getDefaultInstance(),
-                    Blocks.SIGNAL_LIGHT_3.get().asItem().getDefaultInstance(),
-                    Blocks.SIGNAL_LIGHT_4.get().asItem().getDefaultInstance(),
+                    Blocks.SIGNAL_LIGHT_2_ASPECT_1.get().asItem().getDefaultInstance(),
+                    Blocks.SIGNAL_LIGHT_2_ASPECT_2.get().asItem().getDefaultInstance(),
+                    Blocks.SIGNAL_LIGHT_2_ASPECT_3.get().asItem().getDefaultInstance(),
+                    Blocks.SIGNAL_LIGHT_2_ASPECT_4.get().asItem().getDefaultInstance(),
+                    Blocks.SIGNAL_LIGHT_3_ASPECT_1.get().asItem().getDefaultInstance(),
+                    Blocks.SIGNAL_LIGHT_3_ASPECT_2.get().asItem().getDefaultInstance(),
+                    Blocks.SIGNAL_LIGHT_4_ASPECT_1.get().asItem().getDefaultInstance(),
+                    Blocks.SIGNAL_LIGHT_4_ASPECT_2.get().asItem().getDefaultInstance(),
                     Blocks.SIGNAL_SEMAPHORE_1.get().asItem().getDefaultInstance(),
                     Blocks.SIGNAL_SEMAPHORE_2.get().asItem().getDefaultInstance(),
                     Blocks.SIGNAL_POLE.get().asItem().getDefaultInstance()
@@ -230,7 +240,8 @@ public class Filter extends Button
                     Blocks.STATION_NAME_WALL_GRAY.get().asItem().getDefaultInstance(),
                     Blocks.STATION_NAME_TALL_BLOCK.get().asItem().getDefaultInstance(),
                     Blocks.STATION_NAME_TALL_BLOCK_DOUBLE_SIDED.get().asItem().getDefaultInstance(),
-                    Blocks.STATION_NAME_TALL_WALL.get().asItem().getDefaultInstance()
+                    Blocks.STATION_NAME_TALL_WALL.get().asItem().getDefaultInstance(),
+                    Blocks.STATION_COLOR_POLE.get().asItem().getDefaultInstance()
             ));
     public static final Filter FACILITIES_TICKETS = new Filter(Text.translatable("filter.mtr.facilities_tickets"), Blocks.TICKET_MACHINE.get().asItem().getDefaultInstance(),
             Arrays.asList(
@@ -247,7 +258,9 @@ public class Filter extends Button
     /* BUILDINGS */
     public static final Filter BUILDINGS_MISC = new Filter(Text.translatable("filter.mtr.buildings_misc"), Blocks.LOGO.get().asItem().getDefaultInstance(),
             Arrays.asList(
-                    Blocks.LOGO.get().asItem().getDefaultInstance()
+                    Blocks.LOGO.get().asItem().getDefaultInstance(),
+                    Blocks.METAL.get().asItem().getDefaultInstance(),
+                    Blocks.METAL_SLAB.get().asItem().getDefaultInstance()
             ));
     public static final Filter BUILDINGS_MARBLES = new Filter(Text.translatable("filter.mtr.buildings_marbles"), Blocks.MARBLE_BLUE.get().asItem().getDefaultInstance(),
             Arrays.asList(
@@ -343,18 +356,9 @@ public class Filter extends Button
             Arrays.asList(
                     Items.ESCALATOR.get().getDefaultInstance()
             ));
-    public static final Filter LIFTS_LIFTS = new Filter(Text.translatable("filter.mtr.lifts_lifts"), Items.LIFT_2_2.get().getDefaultInstance(),
+    public static final Filter LIFTS_LIFTS = new Filter(Text.translatable("filter.mtr.lifts_lifts"), Items.LIFT_REFRESHER.get().getDefaultInstance(),
             Arrays.asList(
-                    Items.LIFT_2_2.get().getDefaultInstance(),
-                    Items.LIFT_2_2_DOUBLE_SIDED.get().getDefaultInstance(),
-                    Items.LIFT_3_2.get().getDefaultInstance(),
-                    Items.LIFT_3_2_DOUBLE_SIDED.get().getDefaultInstance(),
-                    Items.LIFT_3_3.get().getDefaultInstance(),
-                    Items.LIFT_3_3_DOUBLE_SIDED.get().getDefaultInstance(),
-                    Items.LIFT_4_3.get().getDefaultInstance(),
-                    Items.LIFT_4_3_DOUBLE_SIDED.get().getDefaultInstance(),
-                    Items.LIFT_4_4.get().getDefaultInstance(),
-                    Items.LIFT_4_4_DOUBLE_SIDED.get().getDefaultInstance(),
+                    Items.LIFT_REFRESHER.get().getDefaultInstance(),
                     Items.LIFT_BUTTONS_LINK_CONNECTOR.get().getDefaultInstance(),
                     Items.LIFT_BUTTONS_LINK_REMOVER.get().getDefaultInstance(),
                     Items.LIFT_DOOR_1.get().getDefaultInstance(),
@@ -367,10 +371,10 @@ public class Filter extends Button
     public static final Map<Integer, FilterLinkedList> FILTERS = new HashMap<>();
 
     public static void init() {
-        FILTERS.put(ItemGroups.CORE.getId(), new FilterLinkedList(CORE_DASHBOARDS, CORE_RAILS, CORE_SIGNALS, CORE_CREATORS, CORE_MISC, CORE_NODES));
-        FILTERS.put(ItemGroups.RAILWAY_FACILITIES.getId(), new FilterLinkedList(FACILITIES_GATES, FACILITIES_PIDS, FACILITIES_CEILINGS, FACILITIES_MISC, FACILITIES_FENCES, FACILITIES_RAILWAY_SIGNS, FACILITIES_ROUTE_SIGNS, FACILITIES_SIGNAL_LIGHTS, FACILITIES_STATION_NAME_SIGNS, FACILITIES_TICKETS));
-        FILTERS.put(ItemGroups.STATION_BUILDING_BLOCKS.getId(), new FilterLinkedList(BUILDINGS_MISC, BUILDINGS_MARBLES, BUILDINGS_PLATFORMS, BUILDINGS_STATION_COLOR_BLOCKS, BUILDINGS_STATION_COLOR_SLABS));
-        FILTERS.put(ItemGroups.ESCALATORS_LIFTS.getId(), new FilterLinkedList(LIFTS_ESCALATORS, LIFTS_LIFTS));
+        FILTERS.put(CreativeModeTabs.CORE.get().getId(), new FilterLinkedList(CORE_DASHBOARDS, CORE_RAILS, CORE_SIGNALS, CORE_CREATORS, CORE_MISC, CORE_NODES));
+        FILTERS.put(CreativeModeTabs.RAILWAY_FACILITIES.get().getId(), new FilterLinkedList(FACILITIES_GATES, FACILITIES_PIDS, FACILITIES_CEILINGS, FACILITIES_MISC, FACILITIES_FENCES, FACILITIES_RAILWAY_SIGNS, FACILITIES_ROUTE_SIGNS, FACILITIES_SIGNAL_LIGHTS, FACILITIES_STATION_NAME_SIGNS, FACILITIES_TICKETS));
+        FILTERS.put(CreativeModeTabs.STATION_BUILDING_BLOCKS.get().getId(), new FilterLinkedList(BUILDINGS_MISC, BUILDINGS_MARBLES, BUILDINGS_PLATFORMS, BUILDINGS_STATION_COLOR_BLOCKS, BUILDINGS_STATION_COLOR_SLABS));
+        FILTERS.put(CreativeModeTabs.ESCALATORS_LIFTS.get().getId(), new FilterLinkedList(LIFTS_ESCALATORS, LIFTS_LIFTS));
     }
 
     private static final ResourceLocation TABS = new ResourceLocation("textures/gui/container/creative_inventory/tabs.png");
