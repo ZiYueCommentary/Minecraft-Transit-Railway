@@ -21,9 +21,11 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 	private final int sliderWidthWithText;
 	private final int rightPanelsX;
 	private final boolean showScheduleControls;
+	private final boolean showCruisingAltitude;
 	private final Map<Long, Siding> sidingsInDepot;
 
 	private final Button buttonUseRealTime;
+	private final Button buttonReset;
 	private final WidgetShorterSlider[] sliders = new WidgetShorterSlider[Depot.HOURS_IN_DAY];
 	private final WidgetBetterTextField textFieldDeparture;
 	private final Button buttonAddDeparture;
@@ -31,7 +33,11 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 	private final Button buttonEditInstructions;
 	private final Button buttonGenerateRoute;
 	private final Button buttonClearTrains;
+	private final WidgetBetterCheckbox checkboxRepeatIndefinitely;
+	private final WidgetBetterTextField textFieldCruisingAltitude;
 	private final DashboardList departuresList;
+
+	private final Component cruisingAltitudeText = Text.translatable("gui.mtr.cruising_altitude");
 
 	private static final int PANELS_START = SQUARE_SIZE * 2 + TEXT_FIELD_PADDING;
 	private static final int SLIDER_WIDTH = 64;
@@ -48,10 +54,19 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 		sliderWidthWithText = SLIDER_WIDTH + TEXT_PADDING + font.width(getSliderString(0));
 		rightPanelsX = sliderX + SLIDER_WIDTH + TEXT_PADDING * 2 + font.width(getSliderString(1));
 		showScheduleControls = !transportMode.continuousMovement;
+		showCruisingAltitude = transportMode == TransportMode.AIRPLANE;
 
-		buttonUseRealTime = new Button(0, 0, 0, SQUARE_SIZE, Text.translatable("gui.mtr.schedule_mode_real_time_off"), button -> {
+		buttonUseRealTime = UtilitiesClient.newButton(Text.translatable("gui.mtr.schedule_mode_real_time_off"), button -> {
 			depot.useRealTime = !depot.useRealTime;
 			toggleRealTime();
+			saveData();
+		});
+		buttonReset = UtilitiesClient.newButton(Text.translatable("gui.mtr.reset_sign"), button -> {
+			for (int i = 0; i < Depot.HOURS_IN_DAY; i++) {
+				sliders[i].setValue(0);
+			}
+			data.departures.clear();
+			updateList();
 			saveData();
 		});
 
@@ -69,12 +84,12 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 		});
 
 		textFieldDeparture = new WidgetBetterTextField("[^\\d:+* ]", "07:10:00 + 10 * 00:03:00", 25);
-		buttonAddDeparture = new Button(0, 0, 0, SQUARE_SIZE, Text.literal("+"), button -> {
+		buttonAddDeparture = UtilitiesClient.newButton(Text.literal("+"), button -> {
 			checkDeparture(textFieldDeparture.getValue(), true, false);
 			saveData();
 		});
 
-		buttonEditInstructions = new Button(0, 0, 0, SQUARE_SIZE, Text.translatable("gui.mtr.edit_instructions"), button -> {
+		buttonEditInstructions = UtilitiesClient.newButton(Text.translatable("gui.mtr.edit_instructions"), button -> {
 			if (minecraft != null) {
 				saveData();
 				final List<NameColorDataBase> routes = new ArrayList<>(ClientData.getFilteredDataSet(transportMode, ClientData.ROUTES));
@@ -82,15 +97,21 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 				UtilitiesClient.setScreen(minecraft, new DashboardListSelectorScreen(this, routes, data.routeIds, false, true));
 			}
 		});
-		buttonGenerateRoute = new Button(0, 0, 0, SQUARE_SIZE, Text.translatable("gui.mtr.refresh_path"), button -> {
+		buttonGenerateRoute = UtilitiesClient.newButton(Text.translatable("gui.mtr.refresh_path"), button -> {
 			saveData();
 			depot.clientPathGenerationSuccessfulSegments = -1;
 			PacketTrainDataGuiClient.generatePathC2S(depot.id);
 		});
-		buttonClearTrains = new Button(0, 0, 0, SQUARE_SIZE, Text.translatable("gui.mtr.clear_vehicles"), button -> {
+		buttonClearTrains = UtilitiesClient.newButton(Text.translatable("gui.mtr.clear_vehicles"), button -> {
 			sidingsInDepot.values().forEach(Siding::clearTrains);
 			PacketTrainDataGuiClient.clearTrainsC2S(depot.id, sidingsInDepot.values());
 		});
+		checkboxRepeatIndefinitely = new WidgetBetterCheckbox(0, 0, 0, SQUARE_SIZE, Text.translatable("gui.mtr.repeat_indefinitely"), button -> {
+			saveData();
+			depot.clientPathGenerationSuccessfulSegments = -1;
+			PacketTrainDataGuiClient.generatePathC2S(depot.id);
+		});
+		textFieldCruisingAltitude = new WidgetBetterTextField(WidgetBetterTextField.TextFieldFilter.INTEGER, String.valueOf(Depot.DEFAULT_CRUISING_ALTITUDE), 5);
 	}
 
 	@Override
@@ -101,6 +122,12 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 		IDrawing.setPositionAndWidth(buttonEditInstructions, rightPanelsX, PANELS_START, buttonWidth * 2);
 		IDrawing.setPositionAndWidth(buttonGenerateRoute, rightPanelsX, PANELS_START + SQUARE_SIZE, buttonWidth * (showScheduleControls ? 1 : 2));
 		IDrawing.setPositionAndWidth(buttonClearTrains, rightPanelsX + buttonWidth, PANELS_START + SQUARE_SIZE, buttonWidth);
+		IDrawing.setPositionAndWidth(checkboxRepeatIndefinitely, rightPanelsX, PANELS_START + SQUARE_SIZE * 2 + (showCruisingAltitude ? SQUARE_SIZE + TEXT_FIELD_PADDING : 0), buttonWidth * 2);
+		checkboxRepeatIndefinitely.setChecked(data.repeatInfinitely);
+
+		final int cruisingAltitudeTextWidth = font.width(cruisingAltitudeText) + TEXT_PADDING * 2;
+		IDrawing.setPositionAndWidth(textFieldCruisingAltitude, rightPanelsX + Math.min(cruisingAltitudeTextWidth, buttonWidth * 2 - SQUARE_SIZE * 3) + TEXT_FIELD_PADDING / 2, PANELS_START + SQUARE_SIZE * 2 + TEXT_FIELD_PADDING / 2, SQUARE_SIZE * 3 - TEXT_FIELD_PADDING);
+		textFieldCruisingAltitude.setValue(String.valueOf(data.cruisingAltitude));
 
 		if (showScheduleControls) {
 			for (WidgetShorterSlider slider : sliders) {
@@ -112,7 +139,8 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 		}
 
 		final int leftWidth = rightPanelsX - 1;
-		IDrawing.setPositionAndWidth(buttonUseRealTime, 0, 0, leftWidth);
+		IDrawing.setPositionAndWidth(buttonUseRealTime, 0, 0, leftWidth - SQUARE_SIZE * 3);
+		IDrawing.setPositionAndWidth(buttonReset, leftWidth - SQUARE_SIZE * 3, 0, SQUARE_SIZE * 3);
 
 		departuresList.y = SQUARE_SIZE;
 		departuresList.height = height - SQUARE_SIZE * 2 - TEXT_FIELD_PADDING;
@@ -130,7 +158,12 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 		addDrawableChild(buttonGenerateRoute);
 		if (showScheduleControls) {
 			addDrawableChild(buttonUseRealTime);
+			addDrawableChild(buttonReset);
 			addDrawableChild(buttonClearTrains);
+			addDrawableChild(checkboxRepeatIndefinitely);
+		}
+		if (showCruisingAltitude) {
+			addDrawableChild(textFieldCruisingAltitude);
 		}
 
 		toggleRealTime();
@@ -142,6 +175,19 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 		buttonGenerateRoute.active = data.clientPathGenerationSuccessfulSegments >= 0;
 		departuresList.tick();
 		textFieldDeparture.tick();
+		textFieldCruisingAltitude.tick();
+
+		for (int i = 0; i < Depot.HOURS_IN_DAY; i++) {
+			data.setFrequency(sliders[i].getIntValue(), i);
+		}
+
+		if (data.routeIds.isEmpty()) {
+			checkboxRepeatIndefinitely.visible = false;
+		} else {
+			final Route firstRoute = ClientData.DATA_CACHE.routeIdMap.get(data.routeIds.get(0));
+			final Route lastRoute = ClientData.DATA_CACHE.routeIdMap.get(data.routeIds.get(data.routeIds.size() - 1));
+			checkboxRepeatIndefinitely.visible = firstRoute != null && lastRoute != null && !firstRoute.platformIds.isEmpty() && !lastRoute.platformIds.isEmpty() && firstRoute.getFirstPlatformId() == lastRoute.getLastPlatformId();
+		}
 	}
 
 	@Override
@@ -160,15 +206,21 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 				if (showScheduleControls && !data.useRealTime) {
 					drawString(matrices, font, getTimeString(i), TEXT_PADDING, SQUARE_SIZE * 2 + lineHeight * i + (int) ((lineHeight - TEXT_HEIGHT) / 2F), ARGB_WHITE);
 				}
-				sliders[i].y = SQUARE_SIZE * 2 + lineHeight * i;
+				UtilitiesClient.setWidgetY(sliders[i], SQUARE_SIZE * 2 + lineHeight * i);
 				sliders[i].setHeight(lineHeight);
 			}
+
 			super.render(matrices, mouseX, mouseY, delta);
 
-			font.draw(matrices, Text.translatable("gui.mtr.sidings_in_depot", sidingsInDepot.size()), rightPanelsX + TEXT_PADDING, PANELS_START + SQUARE_SIZE * 2 + TEXT_PADDING, ARGB_WHITE);
+			final int yStartRightPane = PANELS_START + SQUARE_SIZE * (checkboxRepeatIndefinitely.visible ? 3 : 2) + (showCruisingAltitude ? SQUARE_SIZE + TEXT_FIELD_PADDING : 0) + TEXT_PADDING;
+			if (showCruisingAltitude) {
+				font.draw(matrices, cruisingAltitudeText, rightPanelsX + TEXT_PADDING, PANELS_START + SQUARE_SIZE * 2 + TEXT_PADDING + TEXT_FIELD_PADDING / 2F, ARGB_WHITE);
+			}
+			font.draw(matrices, Text.translatable("gui.mtr.sidings_in_depot", sidingsInDepot.size()), rightPanelsX + TEXT_PADDING, yStartRightPane, ARGB_WHITE);
 
 			final Component text;
-			final int nextDepartureMillis = data.getMillisUntilDeploy(minecraft == null || minecraft.level == null ? 0 : Depot.getHour(minecraft.level), 1);
+			data.generateTempDepartures(Minecraft.getInstance().level);
+			final int nextDepartureMillis = data.getMillisUntilDeploy(1);
 			if (nextDepartureMillis >= 0) {
 				final long hour = TimeUnit.MILLISECONDS.toHours(nextDepartureMillis);
 				final long minute = TimeUnit.MILLISECONDS.toMinutes(nextDepartureMillis) % 60;
@@ -177,11 +229,11 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 			} else {
 				text = Text.translatable("gui.mtr.next_departure_none");
 			}
-			font.draw(matrices, text, rightPanelsX + TEXT_PADDING, PANELS_START + SQUARE_SIZE * 3 + TEXT_PADDING, ARGB_WHITE);
+			font.draw(matrices, text, rightPanelsX + TEXT_PADDING, yStartRightPane + SQUARE_SIZE, ARGB_WHITE);
 
 			final String[] stringSplit = getSuccessfulSegmentsText().getString().split("\\|");
 			for (int i = 0; i < stringSplit.length; i++) {
-				font.draw(matrices, stringSplit[i], rightPanelsX + TEXT_PADDING, PANELS_START + SQUARE_SIZE * 4 + TEXT_PADDING + (TEXT_HEIGHT + TEXT_PADDING) * i, ARGB_WHITE);
+				font.draw(matrices, stringSplit[i], rightPanelsX + TEXT_PADDING, yStartRightPane + SQUARE_SIZE * 2 + (TEXT_HEIGHT + TEXT_PADDING) * i, ARGB_WHITE);
 			}
 
 			if (showScheduleControls && !data.useRealTime) {
@@ -207,8 +259,12 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 	@Override
 	protected void saveData() {
 		super.saveData();
-		for (int i = 0; i < Depot.HOURS_IN_DAY; i++) {
-			data.setFrequency(sliders[i].getIntValue(), i);
+		data.repeatInfinitely = checkboxRepeatIndefinitely.visible && checkboxRepeatIndefinitely.selected();
+		try {
+			data.cruisingAltitude = Integer.parseInt(textFieldCruisingAltitude.getValue());
+		} catch (Exception e) {
+			e.printStackTrace();
+			data.cruisingAltitude = Depot.DEFAULT_CRUISING_ALTITUDE;
 		}
 		data.setData(packet -> PacketTrainDataGuiClient.sendUpdate(PACKET_UPDATE_DEPOT, packet));
 	}
@@ -218,7 +274,7 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 			slider.visible = !data.useRealTime;
 		}
 		departuresList.x = data.useRealTime ? 0 : width;
-		textFieldDeparture.x = data.useRealTime ? TEXT_FIELD_PADDING / 2 : width;
+		UtilitiesClient.setWidgetX(textFieldDeparture, data.useRealTime ? TEXT_FIELD_PADDING / 2 : width);
 		buttonAddDeparture.visible = data.useRealTime;
 		buttonUseRealTime.setMessage(Text.translatable(data.useRealTime ? "gui.mtr.schedule_mode_real_time_on" : "gui.mtr.schedule_mode_real_time_off"));
 		updateList();
@@ -248,6 +304,7 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 			departureData.add(new DataConverter(String.format("%2s:%2s:%2s", hour, minute, second).replace(' ', '0'), 0));
 		});
 		departuresList.setData(departureData, false, false, false, false, false, true);
+		data.generateTempDepartures(Minecraft.getInstance().level);
 	}
 
 	private boolean checkDeparture(String text, boolean addToList, boolean removeFromList) {
@@ -322,7 +379,7 @@ public class EditDepotScreen extends EditNameColorScreenBase<Depot> {
 					final Route nextRoute = i < data.routeIds.size() - 1 ? ClientData.DATA_CACHE.routeIdMap.get(data.routeIds.get(i + 1)) : null;
 					if (thisRoute != null) {
 						sum += thisRoute.platformIds.size();
-						if (!thisRoute.platformIds.isEmpty() && nextRoute != null && !nextRoute.platformIds.isEmpty() && thisRoute.platformIds.get(thisRoute.platformIds.size() - 1).equals(nextRoute.platformIds.get(0))) {
+						if (!thisRoute.platformIds.isEmpty() && nextRoute != null && !nextRoute.platformIds.isEmpty() && thisRoute.getLastPlatformId() == nextRoute.getFirstPlatformId()) {
 							sum--;
 						}
 					}
