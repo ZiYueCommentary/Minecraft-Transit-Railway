@@ -4,7 +4,11 @@ import org.mtr.mod.BuildTools
 plugins {
 	id "net.minecraftforge.gradle" version "+"
 	id "org.spongepowered.mixin" version "+"
+	id 'maven-publish'
 }
+
+group "org.mtr.mod"
+version rootProject.properties.version
 
 final BuildTools buildTools = new BuildTools(minecraftVersion, "forge", project)
 
@@ -49,7 +53,6 @@ java {
 		languageVersion.set(JavaLanguageVersion.of(buildTools.javaLanguageVersion))
 	}
 	withSourcesJar()
-	withJavadocJar()
 }
 
 tasks.register("setupFiles") {
@@ -143,3 +146,24 @@ reobf {
 }
 
 assemble.dependsOn shadowJar
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name + "-forge"
+			String ver = project.version
+			version = project.version + "+" + project.minecraftVersion
+			from components.java
+		}
+	}
+
+	repositories {
+		maven {
+			url = "https://maven.ziyuesinicization.site/releases/"
+			credentials {
+				username = "ZiYueCommentary"
+				password = System.getenv("MAVEN_PASS")
+			}
+		}
+	}
+}

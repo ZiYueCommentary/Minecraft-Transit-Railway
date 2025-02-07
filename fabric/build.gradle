@@ -5,7 +5,11 @@ import org.mtr.mod.BuildTools
 
 plugins {
 	id "fabric-loom" version "+"
+	id 'maven-publish'
 }
+
+group "org.mtr.mod"
+version rootProject.properties.version
 
 final BuildTools buildTools = new BuildTools(minecraftVersion, "fabric", project)
 
@@ -44,7 +48,6 @@ java {
 		languageVersion.set(JavaLanguageVersion.of(buildTools.javaLanguageVersion))
 	}
 	withSourcesJar()
-	withJavadocJar()
 }
 
 tasks.register("setupWebsiteFiles") {
@@ -137,4 +140,24 @@ remapJar {
 test {
 	useJUnitPlatform()
 	testLogging { showStandardStreams = true }
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name + "-fabric"
+			version = project.version + "+" + project.minecraftVersion
+			from components.java
+		}
+	}
+
+	repositories {
+		maven {
+			url = "https://maven.ziyuesinicization.site/releases/"
+			credentials {
+				username = "ZiYueCommentary"
+				password = System.getenv("MAVEN_PASS")
+			}
+		}
+	}
 }
